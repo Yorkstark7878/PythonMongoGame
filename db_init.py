@@ -7,6 +7,7 @@ def init_database():
     db.personnages.drop()
     db.monstres.drop()
     db.scores.drop()
+    db.statistiques.drop()  
 
     persos = [
         {"nom": "Guerrier", "atk": 15, "defn": 10, "pv": 100},
@@ -36,6 +37,8 @@ def init_database():
 
     db.personnages.insert_many(persos)
     db.monstres.insert_many(monstres)
+    db.scores.insert_many([])
+    db.statistiques.insert_many([])
 
     print("DB prête.")
     print(len(persos), "persos ajoutés")

@@ -33,6 +33,62 @@ def afficher_equipe(equipe):
         print(f"{i}. {p['nom']} - ATK:{p['atk']} DEF:{p['defn']} PV:{p['pv']}")
     print("="*50)
 
+def afficher_statistiques(joueur):
+    db = get_db()
+    stats = db.statistiques.find_one({"joueur": joueur})
+
+    print("\n" + "="*50)
+    print("STATISTIQUES")
+    print("="*50)
+    print(f"Nom : {joueur}")
+
+    if not stats:
+        print(f"Aucune statistique pour {joueur}")
+    else:
+        print(f"Parties jouées : {stats['parties_jouees']}")
+        print(f"Meilleur score : {stats['meilleur_score']} vagues")
+        print(f"Total de vagues : {stats['total_vagues']}")
+        print(f"Monstres battus : {stats['monstres_battus']}")
+        print(f"Dégâts totaux : {stats['degats_total']}")
+
+    print("="*50)
+
+
+def initialiser_stats(joueur):
+    db = get_db()
+    stats = db.statistiques.find_one({"joueur": joueur})
+    
+    if not stats:
+        db.statistiques.insert_one({
+            "joueur": joueur,
+            "parties_jouees": 0,
+            "meilleur_score": 0,
+            "total_vagues": 0,
+            "monstres_battus": 0,
+            "degats_total": 0
+        })
+
+
+def mettre_a_jour_stats(joueur, vagues, monstres_battus, degats_total):
+    db = get_db()
+    initialiser_stats(joueur)
+
+    stats = db.statistiques.find_one({"joueur": joueur})
+    meilleur = max(stats['meilleur_score'], vagues)
+
+    db.statistiques.update_one(
+        {"joueur": joueur},
+        {
+            "$set": {"meilleur_score": meilleur},
+            "$inc": {
+                "parties_jouees": 1,
+                "total_vagues": vagues,
+                "monstres_battus": monstres_battus,
+                "degats_total": degats_total
+            }
+        }
+    )
+    
 def afficher_classement():
     db = get_db()
     scores = list(db.scores.find().sort("score", -1).limit(3))
