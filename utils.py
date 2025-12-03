@@ -8,9 +8,10 @@ def afficher_menu_principal():
     print("\n" + "="*50)
     print("COMBAT INFINI")
     print("="*50)
-    print("1. Démarrer le jeu")
+    print("1. Jouer")
     print("2. Classement")
-    print("3. Quitter")
+    print("3. Statistiques")
+    print("4. Quitter")
     print("="*50)
 
 def afficher_personnages_disponibles():
@@ -88,7 +89,7 @@ def mettre_a_jour_stats(joueur, vagues, monstres_battus, degats_total):
             }
         }
     )
-    
+
 def afficher_classement():
     db = get_db()
     scores = list(db.scores.find().sort("score", -1).limit(3))

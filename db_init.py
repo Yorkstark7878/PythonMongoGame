@@ -9,7 +9,7 @@ def init_database():
     db.scores.drop()
     db.statistiques.drop()  
 
-    persos = [
+    pnj = [
         {"nom": "Guerrier", "atk": 15, "defn": 10, "pv": 100},
         {"nom": "Mage", "atk": 20, "defn": 5, "pv": 80},
         {"nom": "Archer", "atk": 18, "defn": 7, "pv": 90},
@@ -35,14 +35,16 @@ def init_database():
         {"nom": "Squelette", "atk": 15, "defn": 7, "pv": 90},
     ]
 
-    db.personnages.insert_many(persos)
+    db.personnages.insert_many(pnj)
     db.monstres.insert_many(monstres)
-    db.scores.insert_many([])
-    db.statistiques.insert_many([])
+
+    db.scores.create_index("joueur")    
+    db.statistiques.create_index("joueur")
 
     print("DB prête.")
-    print(len(persos), "persos ajoutés")
+    print(len(pnj), "persos ajoutés")
     print(len(monstres), "monstres ajoutés")
+    print("Collections scores et statistiques créées")
 
 if __name__ == "__main__":
     init_database()
