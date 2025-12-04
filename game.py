@@ -42,6 +42,7 @@ def creer_equipe():
     afficher_equipe([{"nom": p.nom, "atk": p.atk, "defn": p.defn, "pv": p.pv} for p in equipe])
     return equipe
 
+# On convertit le curseur Mongo en liste avant random.choice
 def obtenir_monstre_aleatoire():
     db = get_db()
     data = random.choice(list(db.monstres.find()))
@@ -62,12 +63,14 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
     """Gère un tour de combat entre l'équipe et le monstre."""
     afficher_etat_combat(equipe, monstre, vague)
 
-    # Attaque de l'équipe
     print("ATTAQUE DE L'EQUIPE")
-    vivants = [p for p in equipe if p.est_vivant()]
+    vivants = [p for p in equipe if p.est_vivant()] # évite d’appeler attaquer() sur un pnj mort
+
     for joueur in vivants:
         degats = joueur.attaquer(monstre)
         monstre.prendre_degats(degats)
+
+        # callback utilisé pour compter les dégâts cumulés sans variable globale
         if callback_degats:
             try:
                 callback_degats(degats)
@@ -79,18 +82,16 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
         print(f"{monstre.nom} est mort !")
         return "victoire"
 
-    # Attaque du monstre
     print("\nATTAQUE DU MONSTRE")
-    # protéger si aucun vivant (sécurité)
     if not vivants:
         print("Aucun personnage vivant pour être ciblé.")
         return "defaite"
+
     cible = random.choice(vivants)
     degats = monstre.attaquer(cible)
     cible.prendre_degats(degats)
     print(f"{monstre.nom} → {cible.nom} ({degats} dmg)")
 
-    # Vérification de la défaite de l'équipe
     if all(not p.est_vivant() for p in equipe):
         print("Toute l'équipe est morte.")
         return "defaite"
@@ -101,7 +102,7 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
 def jouer(joueur, equipe):
     vague = 0
     monstres_battus = 0
-    # conteneur mutable pour permettre mise à jour via callback sans changer structure
+    # conteneur mutable pour que la callback puisse modifier la valeur
     degats_total_container = {"total": 0}
 
     print("\nLe combat commence !")
@@ -113,21 +114,21 @@ def jouer(joueur, equipe):
 
         # Combat jusqu'à ce que le monstre ou l'équipe meurt
         while monstre.est_vivant() and any(p.est_vivant() for p in equipe):
-            r = tour_de_combat(
+            resultat = tour_de_combat(
                 equipe,
                 monstre,
                 vague,
                 callback_degats=lambda d: degats_total_container.__setitem__('total', degats_total_container['total'] + d)
             )
 
-            if r == "victoire":
+            if resultat == "victoire":
                 monstres_battus += 1
                 print(f"Vague {vague} gagnée !")
                 input("Monstre suivant...")
                 break
-            elif r == "defaite":
-                # Sauvegarde du score et mise à jour des stats
-                sauvegarder_score(joueur, vague-1)
-                mettre_a_jour_stats(joueur, vague-1, monstres_battus, degats_total_container['total'])
-                print(f"Vous avez survécu à {vague-1} vagues.")
-                return vague-1
+
+            elif resultat == "defaite":
+                sauvegarder_score(joueur, vague - 1)
+                mettre_a_jour_stats(joueur, vague - 1, monstres_battus, degats_total_container['total'])
+                print(f"Vous avez survécu à {vague - 1} vagues.")
+                return vague - 1
