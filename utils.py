@@ -2,7 +2,7 @@ from pymongo import MongoClient
 
 def get_db():
     client = MongoClient("mongodb://localhost:27017/")
-    return client["jeu_video"]
+    return client["python_game"]
 
 def afficher_menu_principal():
     print("\n" + "="*50)

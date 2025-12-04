@@ -2,6 +2,29 @@ import random
 from models import Personnage, Monstre
 from utils import get_db, sauvegarder_score, afficher_equipe, mettre_a_jour_stats
 
+def afficher_choix(persos_db,deja_pris):
+    print(f"\nChoix du perso  : ")
+    for n, p in enumerate(persos_db, 1):
+        mark = "X" if n-1 in deja_pris else " "
+        print(f"[{mark}] {n}. {p['nom']} - ATK:{p['atk']} DEF:{p['defn']} PV:{p['pv']}")
+
+def choix_perso(persos_db, deja_pris):
+    while True:
+        choix = input("Numéro : ")
+        try:
+            choix = int(choix)
+            if 1 <= choix <= len(persos_db) and choix-1 not in deja_pris:
+                return choix-1
+            else:
+                print("Choix invalide ou déjà pris.")
+        except:
+            print("Entrée invalide.")
+
+def gerer_equipe(persos_db,equipe,deja_pris,choix):
+    d = persos_db[choix]
+    equipe.append(Personnage(d["nom"], d["atk"], d["defn"], d["pv"]))
+    deja_pris.add(choix)
+
 def creer_equipe():
     db = get_db()
     persos_db = list(db.personnages.find())
@@ -10,25 +33,10 @@ def creer_equipe():
 
     print("\n=== CREATION DE L'EQUIPE ===\n")
 
-    for i in range(3):
-        while True:
-            print(f"\nChoix du perso {i+1}")
-            for n, p in enumerate(persos_db, 1):
-                mark = "X" if n-1 in deja_pris else " "
-                print(f"[{mark}] {n}. {p['nom']} - ATK:{p['atk']} DEF:{p['defn']} PV:{p['pv']}")
-
-            choix = input("Numéro : ")
-            try:
-                choix = int(choix)
-                if 1 <= choix <= len(persos_db) and choix-1 not in deja_pris:
-                    d = persos_db[choix-1]
-                    equipe.append(Personnage(d["nom"], d["atk"], d["defn"], d["pv"]))
-                    deja_pris.add(choix-1)
-                    break
-                else:
-                    print("Choix invalide ou déjà pris.")
-            except:
-                print("Entrée invalide.")
+    for _ in range(3):
+        afficher_choix(persos_db, deja_pris)
+        choix = choix_perso(persos_db,deja_pris)
+        gerer_equipe(persos_db, equipe, deja_pris, choix)
 
     print("\nEquipe prête !")
     afficher_equipe([{"nom": p.nom, "atk": p.atk, "defn": p.defn, "pv": p.pv} for p in equipe])
@@ -50,47 +58,67 @@ def afficher_etat_combat(equipe, monstre, vague):
         print(f"{i}. {p.afficher_stats()} [{etat}]")
     print()
 
-def tour_de_combat(equipe, monstre, vague):
+def tour_de_combat(equipe, monstre, vague, callback_degats=None):
+    """Gère un tour de combat entre l'équipe et le monstre."""
     afficher_etat_combat(equipe, monstre, vague)
 
+    # Attaque de l'équipe
     print("ATTAQUE DE L'EQUIPE")
     vivants = [p for p in equipe if p.est_vivant()]
-    for p in vivants:
-        d = p.attaquer(monstre)
-        monstre.prendre_degats(d)
-        print(f"{p.nom} → {monstre.nom} ({d} dmg)")
+    for joueur in vivants:
+        degats = joueur.attaquer(monstre)
+        monstre.prendre_degats(degats)
+        if callback_degats:
+            try:
+                callback_degats(degats)
+            except Exception:
+                pass
+        print(f"{joueur.nom} → {monstre.nom} ({degats} dmg)")
 
     if not monstre.est_vivant():
         print(f"{monstre.nom} est mort !")
         return "victoire"
 
+    # Attaque du monstre
     print("\nATTAQUE DU MONSTRE")
+    # protéger si aucun vivant (sécurité)
+    if not vivants:
+        print("Aucun personnage vivant pour être ciblé.")
+        return "defaite"
     cible = random.choice(vivants)
-    d = monstre.attaquer(cible)
-    cible.prendre_degats(d)
-    print(f"{monstre.nom} → {cible.nom} ({d} dmg)")
+    degats = monstre.attaquer(cible)
+    cible.prendre_degats(degats)
+    print(f"{monstre.nom} → {cible.nom} ({degats} dmg)")
 
+    # Vérification de la défaite de l'équipe
     if all(not p.est_vivant() for p in equipe):
         print("Toute l'équipe est morte.")
         return "defaite"
 
-    input("Entrée pour continuer...")
+    input("Appuyez sur Entrée pour continuer...")
     return "continuer"
 
 def jouer(joueur, equipe):
     vague = 0
     monstres_battus = 0
-    degats_total = 0
+    # conteneur mutable pour permettre mise à jour via callback sans changer structure
+    degats_total_container = {"total": 0}
 
     print("\nLe combat commence !")
-    input("Entrée pour démarrer...")
+    input("Appuyez sur Entrée pour démarrer...")
 
     while True:
         vague += 1
         monstre = obtenir_monstre_aleatoire()
 
-        while True:
-            r = tour_de_combat(equipe, monstre, vague, lambda d: globals().__setitem__('degats_total', degats_total + d))
+        # Combat jusqu'à ce que le monstre ou l'équipe meurt
+        while monstre.est_vivant() and any(p.est_vivant() for p in equipe):
+            r = tour_de_combat(
+                equipe,
+                monstre,
+                vague,
+                callback_degats=lambda d: degats_total_container.__setitem__('total', degats_total_container['total'] + d)
+            )
 
             if r == "victoire":
                 monstres_battus += 1
@@ -100,36 +128,6 @@ def jouer(joueur, equipe):
             elif r == "defaite":
                 # Sauvegarde du score et mise à jour des stats
                 sauvegarder_score(joueur, vague-1)
-                mettre_a_jour_stats(joueur, vague-1, monstres_battus, degats_total)
+                mettre_a_jour_stats(joueur, vague-1, monstres_battus, degats_total_container['total'])
                 print(f"Vous avez survécu à {vague-1} vagues.")
                 return vague-1
-            
-def tour_de_combat(equipe, monstre, vague, callback_degats=None):
-    """Suivi des dégâts"""
-    afficher_etat_combat(equipe, monstre, vague)
-
-    print("ATTAQUE DE L'EQUIPE")
-    vivants = [p for p in equipe if p.est_vivant()]
-    for p in vivants:
-        d = p.attaquer(monstre)
-        monstre.prendre_degats(d)
-        if callback_degats:
-            callback_degats(d)
-        print(f"{p.nom} → {monstre.nom} ({d} dmg)")
-
-    if not monstre.est_vivant():
-        print(f"{monstre.nom} est mort !")
-        return "victoire"
-
-    print("\nATTAQUE DU MONSTRE")
-    cible = random.choice(vivants)
-    d = monstre.attaquer(cible)
-    cible.prendre_degats(d)
-    print(f"{monstre.nom} → {cible.nom} ({d} dmg)")
-
-    if all(not p.est_vivant() for p in equipe):
-        print("Toute l'équipe est morte.")
-        return "defaite"
-
-    input("Entrée pour continuer...")
-    return "continuer"
