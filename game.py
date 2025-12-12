@@ -2,6 +2,29 @@ import random
 from models import Personnage, Monstre
 from utils import get_db, sauvegarder_score, afficher_equipe, mettre_a_jour_stats
 
+def verifier_effet_special():
+    """Vérifie si un éffet spécial se déclenche."""
+    chance = random.randint(1, 100)
+
+    # buff positif (10% de chance)
+    if chance <= 10:
+        buffs = [
+            ("Coup Critique", "Les dégâts sont doublés à ce tour !"),
+            ("regen", "Régénération ! 20 PV pour toutes l'équipe !"),
+            ("Défense Suprême", "+5 points de défense pour ce tour !")
+        ]
+        return random.choice(buffs)
+    
+    # 5% de chance de debuff (entre 11 et 15)
+    elif chance <= 15:
+        debuffs = [
+            ("Affiblissement", "Vous êtes affaiblis ! -30% ATK ce tour !"),
+            ("louper", "Vous avez manqué votre attaque !"),
+        ]
+        return random.choice(debuffs)
+    
+    return None, None
+
 def afficher_choix(persos_db,deja_pris):
     print(f"\nChoix du perso  : ")
     for n, p in enumerate(persos_db, 1):
@@ -63,12 +86,37 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
     """Gère un tour de combat entre l'équipe et le monstre."""
     afficher_etat_combat(equipe, monstre, vague)
 
+    # Vérification des effets spéciaux
+    effet, message = verifier_effet_special()
+    if effet:
+        print(f"\n' {message}\n")
+        input("Appuyez sur Entrée pour continuer...")
+
     print("ATTAQUE DE L'EQUIPE")
     vivants = [p for p in equipe if p.est_vivant()] # évite d’appeler attaquer() sur un pnj mort
 
     for joueur in vivants:
         degats = joueur.attaquer(monstre)
+
+        # Application des effets
+        if effet == "critique":
+            degats *= 2
+            print(f" {joueur.nom} -> {monstre.nom} ({degats} dmg) [CRITIQUE!]")
+        elif effet == "rate":
+            degats = 0
+            print(f" {joueur.nom} -> {monstre.nom} (0 dmg) [RATÉ!]")
+        elif effet == "fatigue":
+            degats = int(degats * 0.7)
+            print(f" {joueur.nom} -> {monstre.nom} ({degats} dmg) [FATIGUÉ]")
+        else:
+            print(f"{joueur.nom} -> {monstre.nom} ({degats} dmg)")
+        
         monstre.prendre_degats(degats)
+        if callback_degats and degats > 0:
+            try:
+                callback_degats(degats)
+            except Exception:
+                pass
 
         # callback utilisé pour compter les dégâts cumulés sans variable globale
         if callback_degats:
@@ -77,6 +125,11 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
             except Exception:
                 pass
         print(f"{joueur.nom} → {monstre.nom} ({degats} dmg)")
+
+    if effet == "regen":
+        for p in vivants:
+            p.pv = min(p.pv + 20, p.pv_max)
+            print("\n' L'équipe récupère 20 PV !")
 
     if not monstre.est_vivant():
         print(f"{monstre.nom} est mort !")
@@ -89,8 +142,15 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
 
     cible = random.choice(vivants)
     degats = monstre.attaquer(cible)
+
+    # Effets défense renforcée (réduit dégâts du monstre)
+    if effet == "defense":
+        degats = max(1, degats - 5)
+        print(f"{monstre.nom} -> {cible.nom} ({degats} dmg) [REDUIT!]")
+    else:
+        print(f"{monstre.nom} -> {cible.nom} ({degats} dmg)")
+
     cible.prendre_degats(degats)
-    print(f"{monstre.nom} → {cible.nom} ({degats} dmg)")
 
     if all(not p.est_vivant() for p in equipe):
         print("Toute l'équipe est morte.")
