@@ -27,10 +27,15 @@ Buffs positifs (10% de chance) :
 - Régénération** : +20 PV pour toute l'équipe
 - Défense renforcée** : Réduit les dégâts reçus de 5
 
-Debuffs négatifs (5% de chance) :
+Ajout de la boutique d'items qui propose au joueur un catalogue d'attaque et défense afin de tenter de survivre un maximum de vague possible avec les choix qui sont les suivants : 
+- Potion de soin : Cette potion restaure la santé du joueur à 50 PV.
+- Grande potion : la grande potion restaure la santé entiere du joueur.
+- Boost d'attaque : Le boost d'attaque ajoute +5 ATK au joueur par vague.
+- Bouclier : Le bouclier ajoute au joueur une défense permanente de +3.
+
+Système Debuffs négatifs (5% de chance) :
 - Fatigue : -30% ATK pour ce tour
 - Coup manqué** : 0 dégât ce tour
-
 Ces effets ajoutent de l'imprévisibilité et de la stratégie aux combats !
 
 Le jeu sauvegarde automatiquement :

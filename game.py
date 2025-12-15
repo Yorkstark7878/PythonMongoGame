@@ -1,6 +1,21 @@
 import random
+import time
 from models import Personnage, Monstre
 from utils import get_db, sauvegarder_score, afficher_equipe, mettre_a_jour_stats
+from shop import gerer_boutique
+
+def formater_temps(secondes):
+    if secondes < 60:
+        return f"{secondes}s"
+    elif secondes < 3600:
+        minutes = secondes // 60
+        sec = secondes % 60
+        return f"{minutes}min {sec}s"
+    else:
+        heures = secondes // 3600
+        minutes = (secondes % 3600) // 60
+        sec = secondes % 60
+        return f"{heures}h {minutes}min {sec}s"
 
 def verifier_effet_special():
     """Vérifie si un éffet spécial se déclenche."""
@@ -82,24 +97,27 @@ def afficher_etat_combat(equipe, monstre, vague):
         print(f"{i}. {p.afficher_stats()} [{etat}]")
     print()
 
-def tour_de_combat(equipe, monstre, vague, callback_degats=None):
-    """Gère un tour de combat entre l'équipe et le monstre."""
+def tour_de_combat(equipe, monstre, vague, callback_degats=None, buffs_temporaires=None):
+    if buffs_temporaires is None:
+        buffs_temporaires = {}
     afficher_etat_combat(equipe, monstre, vague)
 
-    # Vérification des effets spéciaux
+    # Vérifie les effets spéciaux
     effet, message = verifier_effet_special()
     if effet:
         print(f"\n' {message}\n")
         input("Appuyez sur Entrée pour continuer...")
-
+    
     print("ATTAQUE DE L'EQUIPE")
-    vivants = [p for p in equipe if p.est_vivant()] # évite d’appeler attaquer() sur un pnj mort
+    vivants = [p for p in equipe if p.est_vivant()] 
 
     for joueur in vivants:
         degats = joueur.attaquer(monstre)
 
         # Application des effets
-        if effet == "critique":
+        if buffs_temporaires.get('boost_atk', False):
+            degats += 5
+        elif effet == "critique":
             degats *= 2
             print(f" {joueur.nom} -> {monstre.nom} ({degats} dmg) [CRITIQUE!]")
         elif effet == "rate":
@@ -117,14 +135,6 @@ def tour_de_combat(equipe, monstre, vague, callback_degats=None):
                 callback_degats(degats)
             except Exception:
                 pass
-
-        # callback utilisé pour compter les dégâts cumulés sans variable globale
-        if callback_degats:
-            try:
-                callback_degats(degats)
-            except Exception:
-                pass
-        print(f"{joueur.nom} → {monstre.nom} ({degats} dmg)")
 
     if effet == "regen":
         for p in vivants:
@@ -164,6 +174,11 @@ def jouer(joueur, equipe):
     monstres_battus = 0
     # conteneur mutable pour que la callback puisse modifier la valeur
     degats_total_container = {"total": 0}
+    pieces = 0 # pièces du joueur
+    buffs_temporaires = {}
+
+    # Phase de boutique d'items avec chrono activé avant le combat
+    temps_debut = time.time()
 
     print("\nLe combat commence !")
     input("Appuyez sur Entrée pour démarrer...")
@@ -178,17 +193,40 @@ def jouer(joueur, equipe):
                 equipe,
                 monstre,
                 vague,
-                callback_degats=lambda d: degats_total_container.__setitem__('total', degats_total_container['total'] + d)
+                callback_degats=lambda d: degats_total_container.__setitem__('total', degats_total_container['total'] + d),
+                buffs_temporaires=buffs_temporaires
             )
 
             if resultat == "victoire":
                 monstres_battus += 1
+                pieces += 10
                 print(f"Vague {vague} gagnée !")
+                print(f"Vous gagnez 10 pièces ! Total pièces : {pieces}")
+
+                buffs_temporaires.clear()
+
+                choix = input("Voulez-vous visiter la boutique ? (o/n) : ").strip().lower()
+                if choix == 'o':
+                    pieces, buffs_temporaires = gerer_boutique(equipe, pieces, buffs_temporaires)
+
                 input("Monstre suivant...")
                 break
 
             elif resultat == "defaite":
+
+                temps_fin = time.time()
+                duree_combat = int(temps_fin - temps_debut)
+
                 sauvegarder_score(joueur, vague - 1)
                 mettre_a_jour_stats(joueur, vague - 1, monstres_battus, degats_total_container['total'])
+                print(f"\n{'='*50}")
+                print(f"RÉSULTATS FINAUX")
+                print(f"{'='*50}")
+                print(f"Vagues survécues : {monstres_battus}")
+                print(f"Monstres battus : {monstres_battus}")
+                print(f"Dégâts infligés : {degats_total_container['total']}")
+                print(f"Pièces gagnées : {pieces}")
+                print(f"Temps de combat : {formater_temps(duree_combat)}")
+                print(f"{'='*50}")
                 print(f"Vous avez survécu à {vague - 1} vagues.")
                 return vague - 1
