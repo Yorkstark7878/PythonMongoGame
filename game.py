@@ -205,20 +205,24 @@ def jouer(joueur, equipe):
 
                 buffs_temporaires.clear()
 
-                choix = input("Voulez-vous visiter la boutique ? (o/n) : ").strip().lower()
-                if choix == 'o':
-                    pieces, buffs_temporaires = gerer_boutique(equipe, pieces, buffs_temporaires)
-
-                input("Monstre suivant...")
-                break
+                while True:
+                    choix = input("Voulez-vous visiter la boutique ? (o/n) : ").strip().lower()
+                    if choix == 'o':
+                        pieces, buffs_temporaires = gerer_boutique(equipe, pieces, buffs_temporaires)
+                        break
+                    elif choix == 'n':
+                        print("Monstre suivant...")
+                        break
+                    else:
+                        print("Choix invalide. Veuillez entrer 'o' ou 'n'.")
 
             elif resultat == "defaite":
-
                 temps_fin = time.time()
                 duree_combat = int(temps_fin - temps_debut)
 
-                sauvegarder_score(joueur, vague - 1)
-                mettre_a_jour_stats(joueur, vague - 1, monstres_battus, degats_total_container['total'])
+                sauvegarder_score(joueur, monstres_battus)
+                mettre_a_jour_stats(joueur, monstres_battus, degats_total_container['total'], duree_combat)
+
                 print(f"\n{'='*50}")
                 print(f"RÉSULTATS FINAUX")
                 print(f"{'='*50}")
@@ -228,5 +232,5 @@ def jouer(joueur, equipe):
                 print(f"Pièces gagnées : {pieces}")
                 print(f"Temps de combat : {formater_temps(duree_combat)}")
                 print(f"{'='*50}")
-                print(f"Vous avez survécu à {vague - 1} vagues.")
-                return vague - 1
+                
+                return monstres_battus
