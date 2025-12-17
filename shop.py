@@ -1,5 +1,5 @@
 def afficher_boutique(pieces):
-    """Affiche le catalogue de la boutique avec les pièces disponibles."""
+    """Affiche la boutique d'items."""
     print("\n" + "="*50)
     print("Boutique d'items")
     print("="*50)

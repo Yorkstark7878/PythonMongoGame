@@ -1,8 +1,4 @@
-from pymongo import MongoClient
-
-def get_db():
-    client = MongoClient("mongodb://localhost:27017/")
-    return client["python_game"]
+from config.database import get_db
 
 def formater_temps(secondes):
     if secondes < 60:
@@ -69,7 +65,6 @@ def afficher_statistiques(joueur):
 
     print("="*50)
 
-
 def initialiser_stats(joueur):
     db = get_db()
     stats = db.statistiques.find_one({"joueur": joueur})
@@ -84,7 +79,6 @@ def initialiser_stats(joueur):
             "degats_total": 0,
             "temps_total": 0
         })
-
 
 def mettre_a_jour_stats(joueur, vagues, monstres_battus, degats_total, temps_combat):
     db = get_db()

@@ -5,7 +5,8 @@ from utils import (
     valider_entree_numerique,
     valider_entree_texte
 )
-from game import creer_equipe, jouer
+from services.equipe_service import creer_equipe
+from game import jouer
 
 def main():
     while True:
