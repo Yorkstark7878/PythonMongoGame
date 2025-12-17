@@ -33,6 +33,20 @@ Ajout de la boutique d'items qui propose au joueur un catalogue d'attaque et dé
 - Boost d'attaque : Le boost d'attaque ajoute +5 ATK au joueur par vague.
 - Bouclier : Le bouclier ajoute au joueur une défense permanente de +3.
 
+Paramètre monstres_battus en double
+Dans l'appel à mettre_a_jour_stats() à la ligne 211 de game.py :
+La fonction attend 5 paramètres dans cet ordre :
+
+- joueur → Nom du joueur
+- vagues → Nombre de vagues survécues
+- monstres_battus → Nombre de monstres battus
+- degats_total → Dégâts totaux
+- temps_combat → Durée du combat
+
+Dans ce jeu : 1 vague = 1 monstre
+Donc vagues et monstres_battus ont toujours la même valeur. On passe donc monstres_battus deux fois pour remplir les deux paramètres avec la même donnée.
+Cette architecture permet une évolution future du jeu (exemple : plusieurs monstres par vague) sans refactoriser la structure de la base de données.
+
 Système Debuffs négatifs (5% de chance) :
 - Fatigue : -30% ATK pour ce tour
 - Coup manqué** : 0 dégât ce tour
