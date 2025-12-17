@@ -4,6 +4,19 @@ def get_db():
     client = MongoClient("mongodb://localhost:27017/")
     return client["python_game"]
 
+def formater_temps(secondes):
+    if secondes < 60:
+        return f"{secondes}s"
+    elif secondes < 3600:
+        minutes = secondes // 60
+        sec = secondes % 60
+        return f"{minutes}min {sec}s"
+    else:
+        heures = secondes // 3600
+        minutes = (secondes % 3600) // 60
+        sec = secondes % 60
+        return f"{heures}h {minutes}min {sec}s"
+
 def afficher_menu_principal():
     print("\n" + "="*50)
     print("COMBAT INFINI")
@@ -51,6 +64,8 @@ def afficher_statistiques(joueur):
         print(f"Total de vagues : {stats['total_vagues']}")
         print(f"Monstres battus : {stats['monstres_battus']}")
         print(f"Dégâts totaux : {stats['degats_total']}")
+        temps_total = stats.get('temps_total', 0)
+        print(f"Temps de jeu : {formater_temps(temps_total)}")
 
     print("="*50)
 
@@ -66,11 +81,12 @@ def initialiser_stats(joueur):
             "meilleur_score": 0,
             "total_vagues": 0,
             "monstres_battus": 0,
-            "degats_total": 0
+            "degats_total": 0,
+            "temps_total": 0
         })
 
 
-def mettre_a_jour_stats(joueur, vagues, monstres_battus, degats_total):
+def mettre_a_jour_stats(joueur, vagues, monstres_battus, degats_total, temps_combat):
     db = get_db()
     initialiser_stats(joueur)
 
@@ -85,7 +101,8 @@ def mettre_a_jour_stats(joueur, vagues, monstres_battus, degats_total):
                 "parties_jouees": 1,
                 "total_vagues": vagues,
                 "monstres_battus": monstres_battus,
-                "degats_total": degats_total
+                "degats_total": degats_total,
+                "temps_total": temps_combat
             }
         }
     )

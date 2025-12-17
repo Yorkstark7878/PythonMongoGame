@@ -1,21 +1,8 @@
 import random
 import time
 from models import Personnage, Monstre
-from utils import get_db, sauvegarder_score, afficher_equipe, mettre_a_jour_stats
+from utils import get_db, sauvegarder_score, afficher_equipe, mettre_a_jour_stats, formater_temps
 from shop import gerer_boutique
-
-def formater_temps(secondes):
-    if secondes < 60:
-        return f"{secondes}s"
-    elif secondes < 3600:
-        minutes = secondes // 60
-        sec = secondes % 60
-        return f"{minutes}min {sec}s"
-    else:
-        heures = secondes // 3600
-        minutes = (secondes % 3600) // 60
-        sec = secondes % 60
-        return f"{heures}h {minutes}min {sec}s"
 
 def verifier_effet_special():
     """Vérifie si un éffet spécial se déclenche."""
@@ -221,7 +208,7 @@ def jouer(joueur, equipe):
                 duree_combat = int(temps_fin - temps_debut)
 
                 sauvegarder_score(joueur, monstres_battus)
-                mettre_a_jour_stats(joueur, monstres_battus, degats_total_container['total'], duree_combat)
+                mettre_a_jour_stats(joueur, monstres_battus, monstres_battus, degats_total_container['total'], duree_combat)
 
                 print(f"\n{'='*50}")
                 print(f"RÉSULTATS FINAUX")
